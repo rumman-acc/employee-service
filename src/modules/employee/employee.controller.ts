@@ -13,7 +13,7 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 
 @Controller('employees')
 export class EmployeeController {
-  constructor(private readonly service: EmployeeService) {}
+  constructor(private readonly service: EmployeeService) { }
 
   @Post()
   create(@Body() dto: CreateEmployeeDto) {
