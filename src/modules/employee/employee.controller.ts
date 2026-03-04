@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { EmployeeStatus, EmploymentType } from './entities/employee.entity';
 
 @Controller('employees')
 export class EmployeeController {
@@ -22,10 +23,30 @@ export class EmployeeController {
 
   @Get()
   findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('department') department?: string,
+    @Query('status') status?: EmployeeStatus,
+    @Query('employmentType') employmentType?: EmploymentType,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
-    return this.service.findAll(Number(page), Number(limit));
+    return this.service.findAll({
+      page: Number(page) || 1,
+      limit: Number(limit) || 10,
+      search,
+      department,
+      status,
+      employmentType,
+      sortBy,
+      sortOrder,
+    });
+  }
+  
+  @Get('dashboard')
+  async getDashboard() {
+    return this.service.getDashboardStats();
   }
 
   @Get(':id')
@@ -42,4 +63,5 @@ export class EmployeeController {
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
+
 }
