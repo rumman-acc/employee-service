@@ -1,9 +1,12 @@
+import { Department } from 'src/modules/department/entities/department.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 export enum EmploymentType {
@@ -49,9 +52,6 @@ export class Employee {
   @Column({ type: 'date' })
   dateOfJoining: Date;
 
-  @Column()
-  department: string;
-
   @Column({ type: 'enum', enum: EmploymentType })
   employmentType: EmploymentType;
 
@@ -85,4 +85,14 @@ export class Employee {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+   @Column({ nullable: true })
+  departmentId: string;
+
+  @ManyToOne(() => Department, (dept) => dept.employees, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'departmentId' })
+  department: Department;   
 }
