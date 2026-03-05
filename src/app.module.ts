@@ -9,6 +9,7 @@ import { UserModule } from './modules/user/user.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DepartmentModule } from './modules/department/department.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AppService } from './app.service';
     AuthModule,
     UserModule,
     EmployeeModule,
+    DepartmentModule  
   ],
   controllers: [AppController],
   providers: [
