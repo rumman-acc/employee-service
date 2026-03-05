@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Employee, EmployeeStatus, EmploymentType } from './entities/employee.entity';
+import {
+  Employee,
+  EmployeeStatus,
+  EmploymentType,
+} from './entities/employee.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 
 @Injectable()
@@ -49,20 +53,26 @@ export class EmployeeService {
       sortOrder = 'DESC',
     } = options;
 
-    const query = this.employeeRepo.createQueryBuilder('employee');
+    const query = this.employeeRepo
+      .createQueryBuilder('employee')
+      .leftJoinAndSelect('employee.department', 'department');
+
+    /* SEARCH */
 
     if (search) {
       query.andWhere(
-        `(employee.firstName ILIKE :search 
-        OR employee.lastName ILIKE :search 
-        OR employee.email ILIKE :search 
-        OR employee.employeeCode ILIKE :search)`,
+        `(employee.firstName ILIKE :search
+      OR employee.lastName ILIKE :search
+      OR employee.email ILIKE :search
+      OR employee.employeeCode ILIKE :search)`,
         { search: `%${search}%` },
       );
     }
 
+    /* FILTERS */
+
     if (department) {
-      query.andWhere('employee.department = :department', { department });
+      query.andWhere('department.name = :department', { department });
     }
 
     if (status) {
@@ -75,11 +85,12 @@ export class EmployeeService {
       });
     }
 
+    /* SORTING */
+
     const allowedSortFields = [
       'firstName',
       'lastName',
       'email',
-      'department',
       'salary',
       'createdAt',
       'dateOfJoining',
@@ -90,6 +101,8 @@ export class EmployeeService {
       : 'createdAt';
 
     query.orderBy(`employee.${safeSortBy}`, sortOrder);
+
+    /* PAGINATION */
 
     query.skip((page - 1) * limit).take(limit);
 
@@ -106,7 +119,11 @@ export class EmployeeService {
   }
 
   async findOne(id: string) {
-    const employee = await this.employeeRepo.findOne({ where: { id } });
+    const employee = await this.employeeRepo
+      .createQueryBuilder('employee')
+      .leftJoinAndSelect('employee.department', 'department')
+      .where('employee.id = :id', { id: id.trim() })
+      .getOne();
 
     if (!employee) {
       throw new NotFoundException('Employee not found');
@@ -128,9 +145,8 @@ export class EmployeeService {
   }
 
   async getDashboardStats() {
-    /* =======================
-       KPI COUNTS
-    ======================= */
+
+    /* KPI COUNTS */
 
     const totalEmployees = await this.employeeRepo.count();
 
@@ -151,6 +167,7 @@ export class EmployeeService {
 
     statusCounts.forEach((row) => {
       const count = Number(row.count);
+
       switch (row.status) {
         case EmployeeStatus.ACTIVE:
           kpis.active = count;
@@ -167,30 +184,25 @@ export class EmployeeService {
       }
     });
 
-    /* =======================
-       EMPLOYEES BY DEPARTMENT
-    ======================= */
+    /* EMPLOYEES BY DEPARTMENT */
 
     const departmentStats = await this.employeeRepo
       .createQueryBuilder('employee')
-      .select('employee.department', 'department')
+      .leftJoin('employee.department', 'department')
+      .select('department.name', 'department')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('employee.department')
+      .groupBy('department.name')
       .orderBy('count', 'DESC')
       .getRawMany();
 
-    /* =======================
-       STATUS DISTRIBUTION
-    ======================= */
+    /* STATUS DISTRIBUTION */
 
     const statusStats = statusCounts.map((row) => ({
       name: row.status,
       value: Number(row.count),
     }));
 
-    /* =======================
-       EMPLOYMENT TYPE DISTRIBUTION
-    ======================= */
+    /* EMPLOYMENT TYPE DISTRIBUTION */
 
     const employmentTypeStats = await this.employeeRepo
       .createQueryBuilder('employee')
@@ -199,36 +211,26 @@ export class EmployeeService {
       .groupBy('employee.employmentType')
       .getRawMany();
 
-    /* =======================
-       AVG SALARY BY DEPARTMENT
-    ======================= */
+    /* AVG SALARY BY DEPARTMENT */
 
     const salaryStats = await this.employeeRepo
       .createQueryBuilder('employee')
-      .select('employee.department', 'department')
+      .leftJoin('employee.department', 'department')
+      .select('department.name', 'department')
       .addSelect('AVG(employee.salary)', 'avgSalary')
       .where('employee.salary IS NOT NULL')
-      .groupBy('employee.department')
+      .groupBy('department.name')
       .getRawMany();
 
-    /* =======================
-       MONTHLY HIRING TREND
-    ======================= */
+    /* MONTHLY HIRING TREND */
 
     const hiringTrend = await this.employeeRepo
       .createQueryBuilder('employee')
-      .select(
-        `TO_CHAR(employee.dateOfJoining, 'YYYY-MM')`,
-        'month',
-      )
+      .select(`TO_CHAR(employee.dateOfJoining, 'YYYY-MM')`, 'month')
       .addSelect('COUNT(*)', 'count')
       .groupBy(`month`)
       .orderBy(`month`, 'ASC')
       .getRawMany();
-
-    /* =======================
-       FINAL RESPONSE
-    ======================= */
 
     return {
       kpis,
