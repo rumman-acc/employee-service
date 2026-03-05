@@ -8,6 +8,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { EmploymentType, EmployeeStatus } from '../entities/employee.entity';
+import { Department } from 'src/modules/department/entities/department.entity';
 
 export class CreateEmployeeDto {
   @IsString()
@@ -36,7 +37,7 @@ export class CreateEmployeeDto {
   dateOfJoining: Date;
 
   @IsString()
-  department: string;
+  department: Department;
 
   @IsEnum(EmploymentType)
   employmentType: EmploymentType;
